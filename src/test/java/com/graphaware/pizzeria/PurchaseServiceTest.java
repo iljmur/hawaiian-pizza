@@ -18,6 +18,7 @@ import com.graphaware.pizzeria.service.PizzeriaException;
 import com.graphaware.pizzeria.service.PurchaseService;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,10 +55,10 @@ public class PurchaseServiceTest {
 
         Authentication authentication = Mockito.mock(Authentication.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        Mockito.lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
         PizzeriaUserPrincipal userPrincipal = new PizzeriaUserPrincipal(currentUser);
-        Mockito.when(authentication.getPrincipal()).thenReturn(userPrincipal);
+        Mockito.lenient().when(authentication.getPrincipal()).thenReturn(userPrincipal);
     }
 
     @Test
@@ -142,5 +143,38 @@ public class PurchaseServiceTest {
         verify(purchaseRepository, times(2)).save(purchaseCaptor.capture());
         Purchase saved = purchaseCaptor.getValue();
         assertThat(saved.getState()).isEqualByComparingTo(PurchaseState.SERVED);
+    }
+
+    @Test
+    void should_apply_cheapest_pizza_free_discount() {
+        Pizza pizza1 = new Pizza();
+        pizza1.setPrice(10.0);
+        Pizza pizza2 = new Pizza();
+        pizza2.setPrice(15.0);
+        Pizza pizza3 = new Pizza();
+        pizza3.setPrice(20.0);
+
+        List<Pizza> pizzas = Arrays.asList(pizza1, pizza2, pizza3);
+
+        double totalAmount = purchaseService.computeAmount(pizzas);
+
+        assertThat(totalAmount).isEqualTo(35.0); // Cheapest pizza (10.0) should be free
+    }
+
+    @Test
+    void should_apply_pineapple_discount() {
+        Pizza pizza1 = new Pizza();
+        pizza1.setPrice(15.0);
+        pizza1.setToppings(Arrays.asList("cheese"));
+
+        Pizza pizza2 = new Pizza();
+        pizza2.setPrice(20.0);
+        pizza2.setToppings(Arrays.asList("pineapple"));
+
+        List<Pizza> pizzas = Arrays.asList(pizza1, pizza2);
+
+        double totalAmount = purchaseService.computeAmount(pizzas);
+
+        assertThat(totalAmount).isEqualTo(33.5); // Pizza without pineapple gets a 10% discount
     }
 }

@@ -51,11 +51,11 @@ public class PurchaseService {
             purchase = purchases.get(0);
         }
         if (purchase.getPizzas() == null) {
-			purchase.setPizzas(new LinkedList<>());
-		}
+            purchase.setPizzas(new LinkedList<>());
+        }
         purchase.setCreationDate(new Date());
         purchase.getPizzas().add(pizza);
-		purchaseRepository.save(purchase);
+        purchaseRepository.save(purchase);
         return purchase;
     }
 
@@ -109,29 +109,43 @@ public class PurchaseService {
         }
     }
 
-    private Double computeAmount(List<Pizza> pizzas) {
+    public Double computeAmount(List<Pizza> pizzas) {
         double totalPrice = 0;
         if (pizzas == null) {
             return 0.0;
         }
-        // buy a pineapple pizza, get 10% off the others
-        boolean applyPineappleDiscount = false;
-        for (Pizza pizza : pizzas) {
-            if (pizza.getToppings().contains("pineapple")) {
-                applyPineappleDiscount = true;
-            }
-        }
-        for (Pizza pizza : pizzas) {
-            if (pizza.getToppings().contains("pineapple")) {
+        if (pizzas.size() >= 3) {
+            // cheapest of 3 pizzas is given for free
+            pizzas.sort((pizza1, pizza2) -> Double.compare(pizza1.getPrice(), pizza2.getPrice()));
+
+            Pizza cheapestPizza = pizzas.get(0);
+            cheapestPizza.setPrice(0.0);
+
+            for (Pizza pizza : pizzas) {
                 totalPrice += pizza.getPrice();
-            }  else {
-                if (applyPineappleDiscount) {
-                        totalPrice += pizza.getPrice() *0.9;
-                } else {
+            }
+        } else {
+            // buy a pineapple pizza, get 10% off the others
+            boolean applyPineappleDiscount = false;
+            for (Pizza pizza : pizzas) {
+                if (pizza.getToppings().contains("pineapple")) {
+                    applyPineappleDiscount = true;
+                    break;
+                }
+            }
+            for (Pizza pizza : pizzas) {
+                if (pizza.getToppings().contains("pineapple")) {
                     totalPrice += pizza.getPrice();
+                } else {
+                    if (applyPineappleDiscount) {
+                        totalPrice += pizza.getPrice() * 0.9;
+                    } else {
+                        totalPrice += pizza.getPrice();
+                    }
                 }
             }
         }
+
         return totalPrice;
     }
 
